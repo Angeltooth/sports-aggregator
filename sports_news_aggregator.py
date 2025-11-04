@@ -244,8 +244,12 @@ class SportsNewsAggregator:
                 if image_url:
                     featured_image_id = self.upload_image_to_wordpress(image_url, title)
                 
+                # Add source link to content
+                source_link_html = f'\n\n<p><em>Read the full article at: <a href="{link}" target="_blank" rel="noopener">{source_name}</a></em></p>'
+                content_with_source = content + source_link_html
+
                 # Post to WordPress
-                success, post_link = self.post_to_wordpress(title, content, featured_image_id)
+                success, post_link = self.post_to_wordpress(title, content_with_source, featured_image_id)
                 
                 if success:
                     self.posted_articles.add(article_hash)
