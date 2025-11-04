@@ -152,41 +152,39 @@ class SportsNewsAggregator:
         
         return None
     
-    def upload_image_to_wordpress(self, image_url, title):
-        """Upload image to WordPress media library"""
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-            
-            # Download image
-            img_response = requests.get(image_url, headers=headers, timeout=10)
-            img_response.raise_for_status()
-            
-            # Prepare upload
-            filename = f"{hashlib.md5(image_url.encode()).hexdigest()}.jpg"
-            
-            files = {
-                'file': (filename, img_response.content, img_response.headers.get('content-type', 'image/jpeg'))
-            }
-            
-            # Upload to WordPress
-            upload_url = f"{self.wordpress['api_url']}/wp-json/wp/v2/media"
-            
-            response = requests.post(
-                upload_url,
-                files=files,
-                auth=self.auth,
-                headers={'Content-Disposition': f'attachment; filename={filename}'}
-            )
-            
-            if response.status_code == 201:
-                return response.json()['id']
-            
-        except Exception as e:
-            print(f"Error uploading image: {e}")
+    def optimize_image(self, image_data, image_url):
+    """Optimize image by resizing and compressing"""
+    try:
+        from io import BytesIO
+        from PIL import Image
         
-        return None
+        # Open image from bytes
+        img = Image.open(BytesIO(image_data))
+        
+        # Convert to RGB if necessary (handles RGBA, etc.)
+        if img.mode in ('RGBA', 'P'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+            img = background
+        
+        # Resize to max 800px width (maintain aspect ratio)
+        max_width = 800
+        if img.width > max_width:
+            new_height = int((img.height * max_width) / img.width)
+            img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Save optimized image to bytes
+        output = BytesIO()
+        img.save(output, format='JPEG', quality=85, optimize=True)
+        output.seek(0)
+        
+        return output.getvalue()
+        
+    except Exception as e:
+        print(f"Error optimizing image: {e}")
+        return image_data
     
     def post_to_wordpress(self, title, content, featured_image_id=None):
         """Post article to WordPress"""
