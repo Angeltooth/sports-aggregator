@@ -6,9 +6,7 @@
   },
   "general": { "max_articles_per_run": 20, "enable_image_download": true, "duplicate_check": true
   },
-  "feeds": [ { "name": "ESPN", "url": "https://www.espn.com/espn/rss/news"
-        },
-        { "name": "BBC Sport", "url": "http://feeds.bbci.co.uk/sport/rss.xml"
+  "feeds": [ { "name": "BBC Sport", "url": "http://feeds.bbci.co.uk/sport/rss.xml"
         },
         { "name": "Sky Sports", "url": "https://www.skysports.com/rss/12040"
         },
