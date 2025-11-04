@@ -20,7 +20,7 @@ import json
 
 # Load and execute the AdRemovalProcessor from the enhanced aggregator file
 # This is a workaround for the import issue
-exec(open('deploy_sports_aggregator_enhanced.py').read(), globals())
+exec(open('deploy_enhanced_sports_aggregator.py').read(), globals())
 
 def test_ad_removal():
     """Test the ad removal system with sample content."""
