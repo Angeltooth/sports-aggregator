@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """
-Test script for Advertisement Removal System
-Run this to see the ad removal in action
+Fixed test script for Advertisement Removal System
+This version has corrected imports
 """
 
-from enhanced_sports_aggregator import AdRemovalProcessor
+import sys
+import os
+
+# Add current directory to path so we can import our modules
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, current_dir)
+
+from deploy_sports_aggregator_enhanced import AdRemovalProcessor
 from bs4 import BeautifulSoup
 
 def test_ad_removal():
