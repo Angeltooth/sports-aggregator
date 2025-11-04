@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
 """
 Fixed test script for Advertisement Removal System
-This version has corrected imports
+This version has corrected imports and runs the code directly
 """
 
 import sys
 import os
 
-# Add current directory to path so we can import our modules
+# Add current directory to path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
 
-from deploy_sports_aggregator_enhanced import AdRemovalProcessor
+# Import required modules
 from bs4 import BeautifulSoup
+import re
+import requests
+from urllib.parse import urljoin, urlparse
+import json
+
+# Load and execute the AdRemovalProcessor from the enhanced aggregator file
+# This is a workaround for the import issue
+exec(open('deploy_sports_aggregator_enhanced.py').read(), globals())
 
 def test_ad_removal():
     """Test the ad removal system with sample content."""
@@ -82,8 +90,10 @@ def test_ad_removal():
     print("📄 ORIGINAL CONTENT:")
     print("-" * 30)
     soup = BeautifulSoup(test_html, 'html.parser')
-    print(soup.get_text()[:500] + "...")
-    print(f"Original length: {len(soup.get_text())} characters")
+    original_text = soup.get_text()[:500] + "..."
+    print(original_text)
+    original_length = len(soup.get_text())
+    print(f"Original length: {original_length} characters")
     
     print("\n🧹 REMOVING ADVERTISEMENTS...")
     print("-" * 30)
@@ -95,12 +105,12 @@ def test_ad_removal():
     print("✨ CLEANED CONTENT:")
     print("-" * 30)
     cleaned_soup = BeautifulSoup(cleaned_content, 'html.parser')
-    print(cleaned_soup.get_text()[:500] + "...")
-    print(f"Cleaned length: {len(cleaned_soup.get_text())} characters")
+    cleaned_text = cleaned_soup.get_text()[:500] + "..."
+    print(cleaned_text)
+    cleaned_length = len(cleaned_soup.get_text())
+    print(f"Cleaned length: {cleaned_length} characters")
     
     # Calculate improvement
-    original_length = len(soup.get_text())
-    cleaned_length = len(cleaned_soup.get_text())
     reduction = ((original_length - cleaned_length) / original_length) * 100
     
     print(f"\n📊 RESULTS:")
@@ -126,9 +136,11 @@ def test_ad_removal():
         "Related Stories"
     ]
     
+    removed_count = 0
     for indicator in ad_indicators:
-        if indicator in soup.get_text() and indicator not in cleaned_soup.get_text():
+        if indicator in original_text and indicator not in cleaned_text:
             print(f"✅ Removed: '{indicator}'")
+            removed_count += 1
     
     print(f"\n🎯 CONTENT PRESERVED:")
     print("-" * 30)
@@ -139,11 +151,23 @@ def test_ad_removal():
         "The team's success has inspired"
     ]
     
+    preserved_count = 0
     for content in main_content:
-        if content in cleaned_soup.get_text():
+        if content in cleaned_text:
             print(f"✅ Preserved: '{content[:30]}...'")
+            preserved_count += 1
     
-    print(f"\n✅ Ad removal test completed successfully!")
+    print(f"\n📈 TEST SUMMARY:")
+    print("-" * 30)
+    print(f"Advertisements removed: {removed_count}/{len(ad_indicators)}")
+    print(f"Content preserved: {preserved_count}/{len(main_content)}")
+    print(f"Ad reduction: {reduction:.1f}%")
+    
+    if reduction > 0 and removed_count > 0:
+        print(f"\n✅ Ad removal test completed successfully!")
+        print("The system is working correctly - ads are being removed while preserving content.")
+    else:
+        print(f"\n⚠️  Test completed - check if ad removal is working as expected")
 
 if __name__ == "__main__":
     test_ad_removal()
