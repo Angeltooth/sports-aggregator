@@ -1,32 +1,19 @@
-
-{ "wordpress": { "api_url": "https://sportsalertnews.com", "username": "Sports News Aggregator", 
-    "application_password": "jwbt F5tn NL8I cl0e stTG iKQM"
+{
+  "wordpress": {
+    "api_url": "https://sportsalertnews.com",
+    "username": "Sports News Aggregator",
+    "password": "jwbt F5tn NL8I cl0e stTG iKQM",
+    "category_id": 1
   },
-  "image_settings": { "max_width": 800, "max_height": 600, "quality": 85, "output_dir": "images"
-  },
-  "general": { "max_articles_per_run": 20, "enable_image_download": true, "duplicate_check": true
-  },
-  "feeds": [ { "name": "BBC Sport", "url": "http://feeds.bbci.co.uk/sport/rss.xml"
-        },
-        { "name": "Sky Sports", "url": "https://www.skysports.com/rss/12040"
-        },
-        { "name": "Fox Sports", "url": 
-            "https://api.foxsports.com/v1/rss?partnerKey=zBaFxRyGKCfxBagJG9b8pqLyndmvo7UU"
-        },
-        { "name": "CBS Sports", "url": "https://www.cbssports.com/rss/headlines"
-        },
-        { "name": "Yahoo Sports", "url": "https://sports.yahoo.com/rss/"
-        },
-        { "name": "The Guardian Sport", "url": 
-            "https://www.theguardian.com/sport/rss"
-        },
-        { "name": "Reuters Sports", "url": "https://www.reuters.com/news/sports"
-        },
-        { "name": "Sports Illustrated", "url": 
-            "https://www.si.com/rss/si_topstories.rss"
-        },
-        { "name": "Bleacher Report", "url": 
-            "https://bleacherreport.com/articles/feed"
-        }
-    ]
+  "rss_feeds": {
+    "BBC Sport": "http://feeds.bbci.co.uk/sport/rss.xml",
+    "Sky Sports": "https://www.skysports.com/rss/12040",
+    "Fox Sports": "https://www.foxsports.com/rss",
+    "CBS Sports": "https://www.cbssports.com/rss/headlines/",
+    "The Guardian": "https://www.theguardian.com/sport/rss",
+    "Yahoo Sports": "https://sports.yahoo.com/rss/",
+    "Sporting News": "https://www.sportingnews.com/us/rss",
+    "Bleacher Report": "https://www.bleacherreport.com/feed/",
+    "Sports Illustrated": "https://www.si.com/rss/all"
+  }
 }
