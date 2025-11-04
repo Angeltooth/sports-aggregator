@@ -1,0 +1,11 @@
+{ "rss_feeds": [ { "name": "Yahoo Sports", "url": 
+      "https://sports.yahoo.com/rss/sports-news.xml", "category": "Sports"
+    },
+    { "name": "ESPN", "url": "https://www.espn.com/espn/rss/news/news", 
+      "category": "Sports"
+    },
+    { "name": "NFL News", "url": "https://www.nfl.com/rss/newsnews.jsp", 
+      "category": "American Football"
+    }
+  ]
+}

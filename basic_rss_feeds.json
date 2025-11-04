@@ -1,0 +1,22 @@
+[
+  {
+    "name": "ESPN Sports",
+    "url": "https://www.espn.com/espn/rss/news"
+  },
+  {
+    "name": "BBC Sport",
+    "url": "https://feeds.bbci.co.uk/sport/rss.xml"
+  },
+  {
+    "name": "CNN Sports",
+    "url": "https://rss.cnn.com/rss/sports_topstories.rss"
+  },
+  {
+    "name": "Fox Sports",
+    "url": "https://www.foxsports.com/rss/headlines"
+  },
+  {
+    "name": "Yahoo Sports",
+    "url": "https://sports.yahoo.com/rss/"
+  }
+]

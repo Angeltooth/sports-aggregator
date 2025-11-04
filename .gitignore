@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.log
+.pytest_cache/
+
+# WordPress / Aggregator specific
+.credentials
+*.key
+config_secrets.json
+posted_articles.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

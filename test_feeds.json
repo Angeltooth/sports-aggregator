@@ -1,0 +1,10 @@
+[
+  {
+    "name": "ESPN Sports",
+    "url": "https://www.espn.com/espn/rss/news"
+  },
+  {
+    "name": "BBC Sport",
+    "url": "https://feeds.bbci.co.uk/sport/rss.xml"
+  }
+]
