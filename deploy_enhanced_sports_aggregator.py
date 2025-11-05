@@ -236,6 +236,87 @@ class ConservativeAdRemovalProcessor:
             return f"<p>Error extracting content from {url}</p>"
 
 
+def validate_rss_entry(entry):
+    """
+    Validate RSS entry and return safe field access.
+    
+    Args:
+        entry: RSS feed entry object
+        
+    Returns:
+        dict: Safe entry fields with fallbacks
+    """
+    # Safe field access with fallbacks
+    safe_entry = {
+        'title': entry.get('title', 'No title available'),
+        'link': entry.get('link') or entry.get('id', ''),
+        'content': '',
+        'summary': entry.get('summary', ''),
+        'published': entry.get('published', ''),
+        'author': entry.get('author', ''),
+        'tags': []
+    }
+    
+    # Handle content field safely
+    if entry.get('content'):
+        if isinstance(entry['content'], list) and len(entry['content']) > 0:
+            if isinstance(entry['content'][0], dict):
+                safe_entry['content'] = entry['content'][0].get('value', '')
+            else:
+                safe_entry['content'] = str(entry['content'][0])
+        elif isinstance(entry['content'], str):
+            safe_entry['content'] = entry['content']
+    
+    # Handle tags safely
+    if entry.get('tags'):
+        safe_entry['tags'] = [tag.get('term', '') for tag in entry['tags'] if hasattr(tag, 'term')]
+    
+    return safe_entry
+
+
+def safe_extract_image_url(article):
+    """
+    Safely extract featured image URL from RSS article.
+    
+    Args:
+        article: RSS feed entry object
+        
+    Returns:
+        str or None: Image URL or None if not found
+    """
+    try:
+        # Get safe article data
+        safe_article = validate_rss_entry(article)
+        
+        # Try to extract from content
+        if safe_article['content']:
+            soup = BeautifulSoup(safe_article['content'], 'html.parser')
+            img = soup.find('img')
+            if img and img.get('src'):
+                return img.get('src')
+        
+        # Try media_content
+        if hasattr(article, 'media_content') and article.media_content:
+            return article.media_content[0]['url']
+        
+        # Try media_thumbnail
+        if hasattr(article, 'media_thumbnail') and article.media_thumbnail:
+            return article.media_thumbnail[0]['url']
+        
+        # Try links safely
+        if hasattr(article, 'links') and article.links:
+            for link in article.links:
+                if hasattr(link, 'type') and link.type and 'image' in link.type:
+                    if hasattr(link, 'href'):
+                        return link.href
+        
+        return None
+        
+    except Exception as e:
+        print(f"Error extracting image URL: {str(e)}")
+        return None
+
+
 class SportsNewsAggregator:
     """
     Enhanced Sports News Aggregator with conservative advertisement removal.
@@ -276,6 +357,7 @@ class SportsNewsAggregator:
         
         total_articles = 0
         processed_articles = 0
+        
         for source_name, feed_url in self.config['rss_feeds'].items():
             try:
                 print(f"Processing {source_name}...")
@@ -289,6 +371,7 @@ class SportsNewsAggregator:
                 
                 for article in articles:
                     try:
+                        # FIXED: Use safe article processing
                         if self.process_article(article, source_name, feed_url):
                             processed_articles += 1
                             time.sleep(2)  # Rate limiting
@@ -305,63 +388,52 @@ class SportsNewsAggregator:
     
     def process_article(self, article, source_name, feed_url):
         """Process a single article and post to WordPress."""
-        # Check if article was already posted
-        article_hash = self.get_article_hash(article.title, article.link)
-        if article_hash in self.posted_articles:
-            print(f"Article already posted: {article.title[:50]}...")
+        try:
+            # FIXED: Use safe article field access
+            safe_article = validate_rss_entry(article)
+            
+            # Check if URL exists, skip if not
+            if not safe_article['link']:
+                print(f"Skipping article with no valid URL from {source_name}")
+                return False
+            
+            # Check if article was already posted
+            article_hash = self.get_article_hash(safe_article['title'], safe_article['link'])
+            if article_hash in self.posted_articles:
+                print(f"Article already posted: {safe_article['title'][:50]}...")
+                return False
+            
+            # Extract content with conservative advertisement removal
+            print(f"Extracting clean content from: {safe_article['title'][:50]}...")
+            content_html = self.ad_processor.extract_clean_content(safe_article['link'])
+            
+            # Clean up HTML and ensure it's suitable for WordPress
+            soup = BeautifulSoup(content_html, 'html.parser')
+            
+            # Remove script and style elements
+            for script in soup(["script", "style"]):
+                script.decompose()
+            
+            # Add source attribution - FIXED: Use safe link access
+            source_link = f'<p><strong>Read the full article at: <a href="{safe_article["link"]}" target="_blank" rel="noopener noreferrer">{source_name}</a></strong></p>'
+            content_html = str(soup) + source_link
+            
+            # Extract featured image - FIXED: Use safe image extraction
+            image_url = safe_extract_image_url(article)
+            
+            # Post to WordPress
+            if self.post_to_wordpress(safe_article['title'], content_html, source_name, image_url):
+                # Track posted article
+                self.posted_articles.append(article_hash)
+                self.save_posted_articles()
+                print(f"Successfully posted: {safe_article['title'][:50]}...")
+                return True
+            
             return False
-        
-        # Extract content with conservative advertisement removal
-        print(f"Extracting clean content from: {article.title[:50]}...")
-        content_html = self.ad_processor.extract_clean_content(article.link)
-        
-        # Clean up HTML and ensure it's suitable for WordPress
-        soup = BeautifulSoup(content_html, 'html.parser')
-        
-        # Remove script and style elements
-        for script in soup(["script", "style"]):
-            script.decompose()
-        
-        # Add source attribution
-        source_link = f'<p><strong>Read the full article at: <a href="{article.link}" target="_blank" rel="noopener noreferrer">{source_name}</a></strong></p>'
-        content_html = str(soup) + source_link
-        
-        # Extract featured image
-        image_url = self.extract_image_url(article)
-        
-        # Post to WordPress
-        if self.post_to_wordpress(article.title, content_html, source_name, image_url):
-            # Track posted article
-            self.posted_articles.append(article_hash)
-            self.save_posted_articles()
-            print(f"Successfully posted: {article.title[:50]}...")
-            return True
-        
-        return False
-    
-    def extract_image_url(self, article):
-        """Extract featured image URL from article."""
-        # Try to extract from content
-        if hasattr(article, 'content') and article.content:
-            soup = BeautifulSoup(article.content[0].value, 'html.parser')
-            img = soup.find('img')
-            if img and img.get('src'):
-                return img.get('src')
-        
-        # Try media_content
-        if hasattr(article, 'media_content') and article.media_content:
-            return article.media_content[0]['url']
-        
-        # Try media_thumbnail
-        if hasattr(article, 'media_thumbnail') and article.media_thumbnail:
-            return article.media_thumbnail[0]['url']
-        
-        # Try links
-        for link in article.links:
-            if link.type and 'image' in link.type:
-                return link.href
-        
-        return None
+            
+        except Exception as e:
+            print(f"Error processing article: {str(e)}")
+            return False
     
     def optimize_image(self, image_url):
         """Optimize image for web usage."""
