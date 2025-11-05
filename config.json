@@ -17,7 +17,7 @@
     "category_id": 576
   },
   "settings": {
-    "articles_per_feed": 10,
+    "articles_per_feed": 4,
     "delay_between_posts": 2,
     "max_content_length": 5000
   }
