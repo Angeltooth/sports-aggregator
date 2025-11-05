@@ -505,31 +505,31 @@ class WordPressContentFormatter:
 
 def get_optimized_image_quality(source_name):
     """
-    Get optimal image quality settings based on source
-    Returns quality settings for different news sources
+    Get optimal image quality settings based on source (SMALLER SIZES FOR BETTER QUALITY)
+    Smaller images = better quality with less compression artifacts
     """
-    # Higher quality for BBC Sport and professional sports outlets
+    # Smaller sizes for better quality across all sources
     if 'bbc' in source_name.lower():
         return {
-            'quality': 95,  # Much higher quality for BBC
+            'quality': 95,  # High quality for BBC
             'optimize': False,  # Disable optimization for BBC
-            'max_width': 1400,  # Allow larger images for BBC
+            'max_width': 800,  # SMALLER SIZE for better quality
             'progressive': True  # Progressive JPEG
         }
     elif any(source in source_name.lower() for source in ['sky', 'guardian', 'yahoo']):
         return {
-            'quality': 92,  # High quality for premium sources
+            'quality': 95,  # High quality for premium sources
             'optimize': False,
-            'max_width': 1300,
+            'max_width': 800,  # SMALLER SIZE for better quality
             'progressive': True
         }
     else:
         # Standard quality for other sources
         return {
-            'quality': 88,  # Still higher than current 85
+            'quality': 92,  # Good quality for other sources
             'optimize': True,
-            'max_width': 1200,
-            'progressive': False
+            'max_width': 700,  # SMALLER SIZE for better quality
+            'progressive': True
         }
 
 
