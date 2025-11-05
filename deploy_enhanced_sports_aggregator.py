@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 """
-Enhanced Sports News Aggregator with Advertisement Removal
-FIXED VERSION - Includes proper WordPress authentication and RSS safety fixes
-CONSERVATIVE AD REMOVAL - Preserves 70-90% of content while removing 10-40% ads
+Enhanced Sports News Aggregator - ULTIMATE VERSION
+INTEGRATES: Advanced Content Processing + All Current Working Features
 
-FIXES APPLIED:
-✅ HTTPBasicAuth authentication method
-✅ Safe RSS field access (validate_rss_entry)
-✅ Safe image extraction (safe_extract_image_url)
-✅ Proper HTTP Basic Auth for WordPress API
+IMPROVEMENTS:
+✅ Smart RSS content extraction (faster, more reliable)
+✅ Advanced ad removal and content cleaning  
+✅ WordPress-ready formatting
+✅ All existing authentication and safety fixes
+✅ Enhanced text processing and formatting
+✅ Better fallback handling
+
+MAINTAINS ALL CURRENT WORKING FEATURES:
+✅ HTTPBasicAuth authentication
+✅ Safe RSS field access
+✅ Image optimization and uploading
+✅ Duplicate detection
+✅ Rate limiting and delays
 """
 
 import feedparser
 import requests
+from requests.auth import HTTPBasicAuth
 import json
 import hashlib
 import time
@@ -21,49 +30,136 @@ from PIL import Image
 from io import BytesIO
 import re
 from typing import List, Set, Optional, Dict, Any
+from datetime import datetime
 
-class ConservativeAdRemovalProcessor:
+
+class UltimateContentProcessor:
     """
-    Conservative advertisement removal that preserves main content.
-    Targets only specific ad elements and promotional text.
-    Preserves 70-90% of content while removing 10-40% advertisements.
+    Ultimate content processing with intelligent extraction and formatting
+    Combines RSS content extraction with smart fallbacks
     """
     
     def __init__(self):
-        # Conservative selectors - only target obvious ad elements
-        self.ad_selectors = {
-            'classes': ['ad', 'advertisement', 'sponsored', 'promo', 'banner-ad', 'sponsored-content'],
-            'ids': ['ad-container', 'sidebar-ad', 'top-ad', 'banner-ad', 'sponsored'],
-            'elements': [
-                'aside[class*="ad"]', 
-                'div[class*="advertisement"]', 
-                'div[id*="ad-"]',
-                'div[class*="sponsored"]',
-                'div[id*="sponsored"]'
-            ]
-        }
-        
-        # Promotional text patterns (conservative - only obvious ads)
-        self.promotional_patterns = [
-            r'sponsored\s+by\s+[\w\s]+store',
-            r'buy\s+now\s+[!\.]+',
-            r'shop\s+now\s+[!\.]+',
-            r'limited\s+time\s+offer',
-            r'subscribe\s+to\s+newsletter',
-            r'sign\s+up\s+for\s+updates',
-            r'get\s+[\w\s]+%?\s*off',
-            r'free\s+shipping',
-            r'discount\s+code',
-            r'shop\s+our\s+[\w\s]+collection',
-            r'limited\s+edition',
-            r'don\'t\s+miss\s+out',
-            r'while\s+supplies\s+last'
+        # Enhanced ad selectors
+        self.ad_selectors = [
+            '[class*="ad"]', '[class*="advert"]', '[class*="sponsor"]',
+            '[class*="related"]', '[class*="recommend"]', '[class*="sidebar"]',
+            '[id*="ad"]', '[id*="advert"]', '[id*="sponsor"]',
+            'script', 'style', 'nav', 'header', 'footer', 'aside',
+            '[class*="nav"]', '[class*="header"]', '[class*="footer"]',
+            '[class*="breadcrumb"]', '[class*="share"]', '[class*="social"]',
+            '[class*="comment"]', '[class*="newsletter"]', '[class*="news-letter"]',
+            '[class*="related-articles"]', '[class*="recommended"]'
         ]
+        
+        # Text cleaning patterns
+        self.clean_patterns = {
+            'whitespace': re.compile(r'\s+'),
+            'smart_quotes': re.compile(r'["""]'),
+            'dashes': re.compile(r'[–—]'),
+            'multiple_newlines': re.compile(r'\n\s*\n\s*\n+')
+        }
     
-    def extract_clean_content(self, url):
-        """Extract and clean content from URL with conservative ad removal."""
+    def process_rss_content(self, rss_entry, source_name):
+        """
+        Enhanced RSS content processing with smart extraction
+        
+        Args:
+            rss_entry: RSS feed entry object
+            source_name: Name of the RSS source
+            
+        Returns:
+            dict: Processed content with title, clean HTML, and metadata
+        """
         try:
-            # Add headers to mimic a browser request
+            # Extract basic info safely
+            title = getattr(rss_entry, 'title', '') or ''
+            url = getattr(rss_entry, 'link', '') or ''
+            description = getattr(rss_entry, 'description', '') or ''
+            
+            # Try to get full content from RSS fields
+            content_html = description
+            
+            # Check for full content in RSS
+            if hasattr(rss_entry, 'content') and rss_entry.content:
+                if isinstance(rss_entry.content, list) and len(rss_entry.content) > 0:
+                    if isinstance(rss_entry.content[0], dict):
+                        content_html = rss_entry.content[0].get('value', content_html)
+                    else:
+                        content_html = str(rss_entry.content[0])
+                elif isinstance(rss_entry.content, str):
+                    content_html = rss_entry.content
+            
+            # Check for custom fields
+            if hasattr(rss_entry, 'fullcontent') and rss_entry.fullcontent:
+                content_html = str(rss_entry.fullcontent)
+            
+            # If RSS content is good enough, process and return
+            if content_html and len(content_html.strip()) > 100:
+                processed_content = self._process_rss_html(content_html, url, title, source_name)
+                if processed_content:
+                    return processed_content
+            
+            # Fallback: Extract full article content
+            print(f"   🔍 RSS content insufficient, extracting full article...")
+            full_article_content = self._extract_full_article(url)
+            if full_article_content:
+                return {
+                    'title': self._clean_title(title),
+                    'content': full_article_content,
+                    'url': url,
+                    'source': source_name,
+                    'extracted_at': datetime.now().isoformat()
+                }
+            
+            # Final fallback: Use description with basic cleaning
+            if description:
+                clean_content = self._clean_text_only(description)
+                return {
+                    'title': self._clean_title(title) or 'Sports News Update',
+                    'content': f'<p>{clean_content}</p>',
+                    'url': url,
+                    'source': source_name,
+                    'extracted_at': datetime.now().isoformat()
+                }
+            
+            return None
+            
+        except Exception as e:
+            print(f"   ❌ Error processing RSS content: {str(e)}")
+            return None
+    
+    def _process_rss_html(self, html_content, url, title, source_name):
+        """Process HTML content from RSS"""
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Remove unwanted elements
+            self._remove_unwanted_elements(soup)
+            
+            # Extract text content
+            text_content = soup.get_text(separator='\n\n', strip=True)
+            
+            if text_content and len(text_content.strip()) > 50:
+                # Format as WordPress HTML
+                formatted_html = self._format_for_wordpress(text_content, title, url, source_name)
+                return {
+                    'title': self._clean_title(title),
+                    'content': formatted_html,
+                    'url': url,
+                    'source': source_name,
+                    'extracted_at': datetime.now().isoformat()
+                }
+            
+            return None
+            
+        except Exception as e:
+            print(f"   ❌ Error processing RSS HTML: {str(e)}")
+            return None
+    
+    def _extract_full_article(self, url):
+        """Extract clean content from full article URL"""
+        try:
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
@@ -73,110 +169,123 @@ class ConservativeAdRemovalProcessor:
             
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Find the main content area - conservative approach
-            main_content = None
+            # Remove unwanted elements
+            self._remove_unwanted_elements(soup)
             
-            # Common content selectors
-            content_selectors = [
+            # Try common article selectors
+            article_selectors = [
                 'article',
                 '[role="main"]',
                 '.content',
+                '.article-content',
                 '.post-content',
                 '.entry-content',
+                '.story-body',
                 '.article-body',
                 '#content',
-                '.story-body',
-                'main'
+                '.main-content',
+                '.story-content'
             ]
             
-            for selector in content_selectors:
-                main_content = soup.select_one(selector)
-                if main_content and len(main_content.get_text(strip=True)) > 200:
+            article_element = None
+            for selector in article_selectors:
+                article_element = soup.select_one(selector)
+                if article_element and len(article_element.get_text(strip=True)) > 200:
                     break
             
-            # If no main content found, use the body
-            if not main_content:
-                main_content = soup.find('body')
+            if article_element:
+                text_content = article_element.get_text(separator='\n\n', strip=True)
+            else:
+                # Fallback: extract from body but exclude unwanted elements
+                body = soup.find('body')
+                if body:
+                    # Remove common unwanted elements
+                    for unwanted in body.find_all(['nav', 'header', 'footer', 'aside', '.sidebar']):
+                        unwanted.decompose()
+                    text_content = body.get_text(separator='\n\n', strip=True)
+                else:
+                    text_content = soup.get_text(separator='\n\n', strip=True)
             
-            if not main_content:
-                return f"<p>Error: Could not find content on {url}</p>"
-            
-            # Remove script and style elements first
-            for script in main_content(["script", "style", "noscript"]):
-                script.decompose()
-            
-            # Remove common navigation/footer elements
-            nav_selectors = ['nav', 'header', 'footer', '.navigation', '.menu', '.sidebar']
-            for nav in main_content.select(', '.join(nav_selectors)):
-                nav.decompose()
-            
-            # Conservative ad removal - only remove obvious ads
-            for selector in self.ad_selectors['elements']:
-                for ad_element in main_content.select(selector):
-                    ad_element.decompose()
-            
-            # Remove elements with ad-related classes
-            for ad_class in self.ad_selectors['classes']:
-                for ad_element in main_content.select(f'.{ad_class}'):
-                    ad_element.decompose()
-            
-            # Remove elements with ad-related IDs
-            for ad_id in self.ad_selectors['ids']:
-                for ad_element in main_content.select(f'#{ad_id}'):
-                    ad_element.decompose()
-            
-            # Remove promotional text patterns
-            text_content = main_content.get_text()
-            for pattern in self.promotional_patterns:
-                matches = re.finditer(pattern, text_content, re.IGNORECASE)
-                for match in matches:
-                    # Find the parent element containing the promotional text
-                    for element in main_content.find_all(text=re.compile(re.escape(match.group(0)), re.IGNORECASE)):
-                        parent = element.parent
-                        if parent and len(parent.get_text(strip=True)) == len(element.get_text(strip=True)):
-                            parent.decompose()
-                            break
-            
-            # Clean up HTML
-            for tag in main_content.find_all():
-                # Remove inline styles and scripts
-                if tag.name in ['style', 'script']:
-                    tag.decompose()
-                    continue
-                
-                # Clean attributes - keep only safe ones
-                allowed_attrs = {'href', 'src', 'alt', 'title', 'class'}
-                attrs_to_keep = {}
-                for attr_name, attr_value in tag.attrs.items():
-                    if attr_name in allowed_attrs and attr_value:
-                        attrs_to_keep[attr_name] = attr_value
-                tag.attrs = attrs_to_keep
-            
-            # Convert back to string
-            content_html = str(main_content)
-            
-            # Basic HTML cleanup
-            content_html = re.sub(r'\s+', ' ', content_html)  # Multiple spaces to single
-            content_html = re.sub(r'\n\s*\n', '\n', content_html)  # Multiple newlines to single
-            
-            return content_html.strip() if content_html.strip() else f"<p>Error: Could not extract content from {url}</p>"
+            return text_content if text_content and len(text_content.strip()) > 100 else None
             
         except Exception as e:
-            print(f"Error extracting content from {url}: {str(e)}")
-            return f"<p>Error extracting content from {url}</p>"
+            print(f"   ❌ Error extracting full article: {str(e)}")
+            return None
+    
+    def _remove_unwanted_elements(self, soup):
+        """Remove ads, navigation, and other unwanted elements"""
+        # Remove script and style tags
+        for tag in soup.find_all(['script', 'style']):
+            tag.decompose()
+        
+        # Remove ad-related elements
+        for selector in self.ad_selectors:
+            for element in soup.select(selector):
+                element.decompose()
+        
+        # Remove empty paragraphs and divs
+        for element in soup.find_all(['p', 'div', 'span']):
+            if element.get_text(strip=True) == '' and not element.find_all(['img', 'video', 'iframe']):
+                element.decompose()
+    
+    def _format_for_wordpress(self, text_content, title, url, source_name):
+        """Format clean text content for WordPress"""
+        # Split into paragraphs and format
+        paragraphs = []
+        for paragraph in text_content.split('\n\n'):
+            paragraph = paragraph.strip()
+            if paragraph and len(paragraph) > 10:
+                # Capitalize first letter if needed
+                if paragraph and paragraph[0].islower():
+                    paragraph = paragraph[0].upper() + paragraph[1:]
+                paragraphs.append(f'<p>{paragraph}</p>')
+        
+        formatted_content = '\n\n'.join(paragraphs)
+        
+        # Add attribution
+        formatted_content += f'\n\n<hr>\n<p><em>Originally published at: <a href="{url}" target="_blank" rel="noopener noreferrer">{source_name}</a></em></p>'
+        
+        return formatted_content
+    
+    def _clean_text_only(self, text):
+        """Clean text without HTML"""
+        # Replace smart quotes
+        text = self.clean_patterns['smart_quotes'].sub('"', text)
+        
+        # Normalize dashes
+        text = self.clean_patterns['dashes'].sub('-', text)
+        
+        # Remove excessive whitespace
+        text = self.clean_patterns['whitespace'].sub(' ', text)
+        text = self.clean_patterns['multiple_newlines'].sub('\n\n', text)
+        
+        return text.strip()
+    
+    def _clean_title(self, title):
+        """Clean and format title"""
+        if not title:
+            return ''
+        
+        # Remove extra whitespace
+        title = self.clean_patterns['whitespace'].sub(' ', title.strip())
+        
+        # Remove common prefixes/suffixes
+        prefixes_to_remove = [
+            r'^\s*(News|Update|Report|Breaking)\s*[-:|]\s*',
+            r'^\s*Latest\s*[-:|]\s*',
+            r'^\s*\[\w+\]\s*'  # Remove [sport] prefixes
+        ]
+        
+        for pattern in prefixes_to_remove:
+            title = re.sub(pattern, '', title, flags=re.IGNORECASE)
+        
+        return title.strip()
 
 
 def validate_rss_entry(entry):
     """
-    Validate RSS entry and return safe field access.
-    
-    Args:
-        entry: RSS feed entry object
-        
-    Returns:
-        dict: Safe entry fields with fallbacks
+    Validate RSS entry and return safe field access (EXISTING - KEEP UNCHANGED)
     """
-    # Safe field access with fallbacks
     safe_entry = {
         'title': entry.get('title', 'No title available'),
         'link': entry.get('link') or entry.get('id', ''),
@@ -187,7 +296,6 @@ def validate_rss_entry(entry):
         'tags': []
     }
     
-    # Handle content field safely
     if entry.get('content'):
         if isinstance(entry['content'], list) and len(entry['content']) > 0:
             if isinstance(entry['content'][0], dict):
@@ -197,7 +305,6 @@ def validate_rss_entry(entry):
         elif isinstance(entry['content'], str):
             safe_entry['content'] = entry['content']
     
-    # Handle tags safely
     if entry.get('tags'):
         safe_entry['tags'] = [tag.get('term', '') for tag in entry['tags'] if hasattr(tag, 'term')]
     
@@ -206,34 +313,23 @@ def validate_rss_entry(entry):
 
 def safe_extract_image_url(article):
     """
-    Safely extract featured image URL from RSS article.
-    
-    Args:
-        article: RSS feed entry object
-        
-    Returns:
-        str or None: Image URL or None if not found
+    Safely extract featured image URL from RSS article (EXISTING - KEEP UNCHANGED)
     """
     try:
-        # Get safe article data
         safe_article = validate_rss_entry(article)
         
-        # Try to extract from content
         if safe_article['content']:
             soup = BeautifulSoup(safe_article['content'], 'html.parser')
             img = soup.find('img')
             if img and img.get('src'):
                 return img.get('src')
         
-        # Try media_content
         if hasattr(article, 'media_content') and article.media_content:
             return article.media_content[0]['url']
         
-        # Try media_thumbnail
         if hasattr(article, 'media_thumbnail') and article.media_thumbnail:
             return article.media_thumbnail[0]['url']
         
-        # Try links safely
         if hasattr(article, 'links') and article.links:
             for link in article.links:
                 if hasattr(link, 'type') and link.type and 'image' in link.type:
@@ -247,15 +343,15 @@ def safe_extract_image_url(article):
         return None
 
 
-class SportsNewsAggregator:
+class UltimateSportsAggregator:
     def __init__(self, config_file='config.json'):
-        """Initialize the Sports News Aggregator."""
+        """Initialize the Ultimate Sports News Aggregator."""
         self.config = self.load_config(config_file)
-        self.ad_processor = ConservativeAdRemovalProcessor()
+        self.content_processor = UltimateContentProcessor()  # NEW: Ultimate processor
         self.posted_articles = self.load_posted_articles()
     
     def load_config(self, config_file):
-        """Load configuration from JSON file."""
+        """Load configuration from JSON file (EXISTING - KEEP UNCHANGED)."""
         try:
             with open(config_file, 'r') as f:
                 return json.load(f)
@@ -267,7 +363,7 @@ class SportsNewsAggregator:
             return {}
     
     def load_posted_articles(self):
-        """Load list of previously posted articles."""
+        """Load list of previously posted articles (EXISTING - KEEP UNCHANGED)."""
         try:
             with open('posted_articles.json', 'r') as f:
                 return set(json.load(f))
@@ -275,25 +371,23 @@ class SportsNewsAggregator:
             return set()
     
     def save_posted_articles(self):
-        """Save list of posted articles."""
+        """Save list of posted articles (EXISTING - KEEP UNCHANGED)."""
         with open('posted_articles.json', 'w') as f:
             json.dump(list(self.posted_articles), f)
     
     def get_article_hash(self, title, url):
-        """Generate a unique hash for an article."""
+        """Generate a unique hash for an article (EXISTING - KEEP UNCHANGED)."""
         content = f"{title}{url}"
         return hashlib.md5(content.encode()).hexdigest()
     
     def optimize_image(self, image_url):
-        """Download and optimize image for WordPress."""
+        """Download and optimize image for WordPress (EXISTING - KEEP UNCHANGED)."""
         try:
             response = requests.get(image_url, timeout=10)
             response.raise_for_status()
             
-            # Open and optimize image
             image = Image.open(BytesIO(response.content))
             
-            # Convert to RGB if necessary
             if image.mode in ('RGBA', 'LA', 'P'):
                 background = Image.new('RGB', image.size, (255, 255, 255))
                 if image.mode == 'P':
@@ -301,14 +395,12 @@ class SportsNewsAggregator:
                 background.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
                 image = background
             
-            # Resize if too large (max 1200px width)
             max_width = 1200
             if image.width > max_width:
                 ratio = max_width / image.width
                 new_height = int(image.height * ratio)
                 image = image.resize((max_width, new_height), Image.Resampling.LANCZOS)
             
-            # Save optimized image
             output = BytesIO()
             image.save(output, format='JPEG', quality=85, optimize=True)
             output.seek(0)
@@ -319,7 +411,7 @@ class SportsNewsAggregator:
             return None
     
     def upload_image_to_wordpress(self, image_url, title):
-        """Upload optimized image to WordPress and return media ID."""
+        """Upload optimized image to WordPress (EXISTING - KEEP UNCHANGED)."""
         if not image_url:
             return None
         
@@ -328,11 +420,8 @@ class SportsNewsAggregator:
             return None
         
         try:
-            # FIXED: Import HTTPBasicAuth
-            from requests.auth import HTTPBasicAuth
             media_url = f"{self.config['wordpress']['url']}/wp-json/wp/v2/media"
             
-            # FIXED: Use proper HTTP Basic Auth
             username = self.config['wordpress']['username']
             app_password = self.config['wordpress']['app_password']
             auth = HTTPBasicAuth(username, app_password)
@@ -356,10 +445,8 @@ class SportsNewsAggregator:
             return None
     
     def post_to_wordpress(self, title, content, source_name, image_url=None):
-        """Post article to WordPress."""
+        """Post article to WordPress (EXISTING - KEEP UNCHANGED)."""
         try:
-            # FIXED: Import HTTPBasicAuth
-            from requests.auth import HTTPBasicAuth
             wordpress_url = f"{self.config['wordpress']['url']}/wp-json/wp/v2/posts"
             
             # Upload image if available
@@ -369,13 +456,12 @@ class SportsNewsAggregator:
             
             post_data = {
                 'title': title,
-                'content': content,
+                'content': content,  # Now clean HTML from content processor
                 'status': 'publish',
                 'categories': [self.config['wordpress']['category_id']],
                 'featured_media': featured_media_id
             }
             
-            # FIXED: Use proper HTTP Basic Auth
             username = self.config['wordpress']['username']
             app_password = self.config['wordpress']['app_password']
             auth = HTTPBasicAuth(username, app_password)
@@ -399,60 +485,59 @@ class SportsNewsAggregator:
             return False
     
     def process_article(self, article, source_name, feed_url):
-        """Process a single article and post to WordPress."""
+        """Process a single article with enhanced content extraction."""
         try:
-            # FIXED: Use safe article field access
+            # Use safe article field access
             safe_article = validate_rss_entry(article)
             
-            # Check if URL exists, skip if not
+            # Check if URL exists
             if not safe_article['link']:
-                print(f"Skipping article with no valid URL from {source_name}")
+                print(f"   ⏭️  Skipping article with no valid URL from {source_name}")
                 return False
             
             # Check if article was already posted
             article_hash = self.get_article_hash(safe_article['title'], safe_article['link'])
             if article_hash in self.posted_articles:
-                print(f"Article already posted: {safe_article['title'][:50]}...")
+                print(f"   ⏭️  Article already posted: {safe_article['title'][:50]}...")
                 return False
             
-            # Extract content with conservative advertisement removal
-            print(f"Extracting clean content from: {safe_article['title'][:50]}...")
-            content_html = self.ad_processor.extract_clean_content(safe_article['link'])
+            print(f"   🔄 Processing: {safe_article['title'][:50]}...")
             
-            # Clean up HTML and ensure it's suitable for WordPress
-            soup = BeautifulSoup(content_html, 'html.parser')
+            # NEW: Use ultimate content processor
+            processed_content = self.content_processor.process_rss_content(article, source_name)
             
-            # Remove script and style elements
-            for script in soup(["script", "style"]):
-                script.decompose()
+            if not processed_content:
+                print(f"   ❌ Failed to extract content from {safe_article['title'][:50]}...")
+                return False
             
-            # Add source attribution - FIXED: Use safe link access
-            source_link = f'<p><strong>Read the full article at: <a href="{safe_article["link"]}" target="_blank" rel="noopener noreferrer">{source_name}</a></strong></p>'
-            content_html = str(soup) + source_link
-            
-            # Extract featured image - FIXED: Use safe image extraction
+            # Extract featured image
             image_url = safe_extract_image_url(article)
             
             # Post to WordPress
-            print(f"Posting to WordPress: {safe_article['title'][:50]}...")
-            success = self.post_to_wordpress(safe_article['title'], content_html, source_name, image_url)
+            print(f"   📤 Posting to WordPress...")
+            success = self.post_to_wordpress(
+                processed_content['title'], 
+                processed_content['content'], 
+                source_name, 
+                image_url
+            )
             
             if success:
-                print(f"✅ Successfully posted: {safe_article['title'][:50]}...")
+                print(f"   ✅ Successfully posted: {processed_content['title'][:50]}...")
                 self.posted_articles.add(article_hash)
                 return True
             else:
-                print(f"❌ Failed to post: {safe_article['title'][:50]}...")
+                print(f"   ❌ Failed to post: {processed_content['title'][:50]}...")
                 return False
                 
         except Exception as e:
-            print(f"❌ Error processing article: {str(e)}")
+            print(f"   ❌ Error processing article: {str(e)}")
             return False
     
     def process_rss_feed(self, source_name, feed_url):
-        """Process RSS feed and post articles to WordPress."""
+        """Process RSS feed and post articles to WordPress (EXISTING - KEEP UNCHANGED)."""
         try:
-            print(f"\n🔄 Processing {source_name}...")
+            print(f"\n📡 Processing {source_name}...")
             feed = feedparser.parse(feed_url)
             
             if not feed.entries:
@@ -477,13 +562,14 @@ class SportsNewsAggregator:
             return processed_articles
             
         except Exception as e:
-            print(f"❌ Error processing {source_name}: {str(e)}")
+            print(f"   ❌ Error processing {source_name}: {str(e)}")
             return 0
     
     def run(self):
-        """Main execution method."""
-        print("🚀 Sports News Aggregator Starting...")
-        print(f"📅 Processing time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        """Main execution method with enhanced processing."""
+        print("🚀 Ultimate Sports News Aggregator Starting...")
+        print("📰 Using Advanced Content Processing...")
+        print(f"🕐 Processing time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
         
         if not self.config:
             print("❌ No configuration loaded. Exiting.")
@@ -501,23 +587,24 @@ class SportsNewsAggregator:
                 time.sleep(1)
                 
             except Exception as e:
-                print(f"Error processing {source_name}: {str(e)}")
+                print(f"❌ Error processing {source_name}: {str(e)}")
                 continue
         
         # Save posted articles
         self.save_posted_articles()
         
-        print(f"\n🏁 Aggregation Complete!")
+        print(f"\n🏁 Ultimate Aggregation Complete!")
         print(f"📊 Summary:")
-        print(f"   - Total feeds processed: {total_feeds}")
-        print(f"   - Total articles posted: {total_processed}")
-        print(f"   - Database updated: posted_articles.json")
+        print(f"   📡 Total feeds processed: {total_feeds}")
+        print(f"   📰 Total articles posted: {total_processed}")
+        print(f"   🗃️  Database updated: posted_articles.json")
+        print(f"   ✨ Enhanced content processing active")
 
 
 def main():
     """Main entry point."""
     try:
-        aggregator = SportsNewsAggregator()
+        aggregator = UltimateSportsAggregator()
         aggregator.run()
     except KeyboardInterrupt:
         print("\n🛑 Process interrupted by user")
