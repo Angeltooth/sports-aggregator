@@ -588,7 +588,7 @@ class UltimateSportsAggregator:
             return None
     
     def upload_image_to_wordpress(self, image_url, title):
-        """Upload optimized image to WordPress (EXISTING - KEEP UNCHANGED)."""
+        """Upload optimized image to WordPress (FIXED VERSION)."""
         if not image_url:
             return None
         
@@ -603,8 +603,10 @@ class UltimateSportsAggregator:
             app_password = self.config['wordpress']['app_password']
             auth = HTTPBasicAuth(username, app_password)
             
+            # Fixed headers - WordPress needs Content-Type for images
             headers = {
-                'Content-Disposition': f'attachment; filename="{title[:50]}.jpg"'
+                'Content-Type': 'image/jpeg',  # Added proper content type
+                'Content-Disposition': f'attachment; filename="{title[:30].replace("/", "_").replace(":", "_")}.jpg"'
             }
             
             response = requests.post(
@@ -613,8 +615,24 @@ class UltimateSportsAggregator:
                 data=optimized_image,
                 auth=auth
             )
-            response.raise_for_status()
             
+            if response.status_code == 400:
+                print(f"Image upload attempt failed (400). Trying alternative method...")
+                # Alternative method using multipart form data
+                files = {
+                    'file': (f"{title[:30].replace('/', '_').replace(':', '_')}.jpg", 
+                            optimized_image, 'image/jpeg')
+                }
+                data = {'title': title[:50]}
+                
+                response = requests.post(
+                    media_url,
+                    files=files,
+                    data=data,
+                    auth=auth
+                )
+            
+            response.raise_for_status()
             return response.json()['id']
             
         except Exception as e:
