@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Enhanced Sports News Aggregator - ULTIMATE VERSION
-INTEGRATES: Advanced Content Processing + All Current Working Features
+Enhanced Sports News Aggregator - ULTIMATE VERSION (UPDATED)
+INTEGRATES: Advanced Content Processing + WordPress Professional Formatting
 
 IMPROVEMENTS:
 ✅ Smart RSS content extraction (faster, more reliable)
 ✅ Advanced ad removal and content cleaning  
-✅ WordPress-ready formatting
+✅ Professional WordPress formatting (FIXES LAYOUT ISSUES)
 ✅ All existing authentication and safety fixes
 ✅ Enhanced text processing and formatting
 ✅ Better fallback handling
@@ -17,6 +17,7 @@ MAINTAINS ALL CURRENT WORKING FEATURES:
 ✅ Image optimization and uploading
 ✅ Duplicate detection
 ✅ Rate limiting and delays
+✅ Ultimate Content Processor
 """
 
 import feedparser
@@ -343,11 +344,187 @@ def safe_extract_image_url(article):
         return None
 
 
+class WordPressContentFormatter:
+    """Professional WordPress content formatter to fix layout issues"""
+    
+    def __init__(self):
+        self.max_paragraphs = 12
+        self.min_paragraph_length = 30
+        
+    def format_content(self, content_html, title, url, source_name):
+        """
+        Format content professionally for WordPress display
+        
+        Args:
+            content_html: Raw HTML content from processor
+            title: Article title
+            url: Source URL
+            source_name: Source name
+        
+        Returns:
+            Clean, professional HTML for WordPress
+        """
+        try:
+            # If it's already clean HTML with paragraphs, process further
+            if '<p>' in content_html:
+                return self._enhance_existing_html(content_html, url, source_name)
+            else:
+                # Convert raw text to proper HTML
+                return self._convert_text_to_html(content_html, url, source_name)
+                
+        except Exception as e:
+            print(f"Error in WordPress formatting: {e}")
+            return f"<p>Content from {source_name}</p><p><em>Read more: <a href='{url}' target='_blank' rel='noopener'>Original Article</a></em></p>"
+    
+    def _enhance_existing_html(self, html_content, url, source_name):
+        """Enhance existing HTML to remove layout issues"""
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Remove empty paragraphs
+            for p in soup.find_all('p'):
+                text = p.get_text(strip=True)
+                if not text or len(text) < 5:
+                    p.decompose()
+                else:
+                    # Clean paragraph text
+                    clean_text = self._clean_paragraph_text(text)
+                    if clean_text:
+                        p.string = clean_text
+                    else:
+                        p.decompose()
+            
+            # Get remaining paragraphs
+            paragraphs = soup.find_all('p')
+            
+            # Limit and format paragraphs
+            final_paragraphs = []
+            for p in paragraphs[:self.max_paragraphs]:
+                text = p.get_text(strip=True)
+                if text and len(text) >= self.min_paragraph_length:
+                    final_paragraphs.append(f"<p>{text}</p>")
+            
+            # Create final content
+            content_html = '\n\n'.join(final_paragraphs)
+            
+            # Add clean source attribution
+            content_html += f'\n\n<p><strong>Source:</strong> <a href="{url}" target="_blank" rel="noopener noreferrer">{source_name}</a></p>'
+            
+            return content_html
+            
+        except Exception as e:
+            print(f"Error enhancing HTML: {e}")
+            return f"<p>Content from {source_name}</p><p><em>Read more: <a href='{url}' target='_blank' rel='noopener'>Original Article</a></em></p>"
+    
+    def _convert_text_to_html(self, text_content, url, source_name):
+        """Convert raw text to professional HTML"""
+        try:
+            # Split into paragraphs by double newlines or sentence patterns
+            paragraphs = []
+            
+            # Clean the text
+            text_content = self._clean_paragraph_text(text_content)
+            
+            # Split by double newlines first
+            parts = text_content.split('\n\n')
+            
+            for part in parts:
+                part = part.strip()
+                if part and len(part) >= self.min_paragraph_length:
+                    # Further split very long paragraphs
+                    if len(part) > 500:
+                        sentences = re.split(r'(?<=[.!?])\s+', part)
+                        current_para = ""
+                        
+                        for sentence in sentences:
+                            if len(current_para + sentence) < 400:
+                                current_para += sentence + " "
+                            else:
+                                if current_para.strip():
+                                    paragraphs.append(current_para.strip())
+                                current_para = sentence + " "
+                        
+                        if current_para.strip():
+                            paragraphs.append(current_para.strip())
+                    else:
+                        paragraphs.append(part)
+            
+            # Limit paragraphs
+            limited_paragraphs = paragraphs[:self.max_paragraphs]
+            
+            # Format as HTML
+            html_paragraphs = [f"<p>{para}</p>" for para in limited_paragraphs]
+            content_html = '\n\n'.join(html_paragraphs)
+            
+            # Add source attribution
+            content_html += f'\n\n<p><strong>Source:</strong> <a href="{url}" target="_blank" rel="noopener noreferrer">{source_name}</a></p>'
+            
+            return content_html
+            
+        except Exception as e:
+            print(f"Error converting text to HTML: {e}")
+            return f"<p>Content from {source_name}</p><p><em>Read more: <a href='{url}' target='_blank' rel='noopener'>Original Article</a></em></p>"
+    
+    def _clean_paragraph_text(self, text):
+        """Clean paragraph text for WordPress"""
+        if not text:
+            return ""
+        
+        # Remove excessive whitespace
+        text = re.sub(r'\s+', ' ', text)
+        
+        # Fix HTML entities
+        text = text.replace('&quot;', '"').replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+        
+        # Remove any HTML tags (defensive)
+        text = re.sub(r'<[^>]+>', '', text)
+        
+        # Clean special characters
+        text = text.replace('"', '"').replace('"', '"')
+        text = text.replace(''', "'").replace(''', "'")
+        text = text.replace('–', '-').replace('—', ' - ')
+        
+        # Remove promotional text
+        promotional_patterns = [
+            r'subscribe.*newsletter',
+            r'sign.*up.*updates', 
+            r'limited.*time.*offer',
+            r'discount.*code',
+            r'shop.*now',
+            r'buy.*now',
+            r'limited.*edition',
+            r'while.*supplies.*last'
+        ]
+        
+        for pattern in promotional_patterns:
+            if re.search(pattern, text, re.IGNORECASE):
+                return ""  # Skip promotional content
+        
+        return text.strip()
+
+
+def format_wordpress_content_professional(content_html, title, url, source_name):
+    """
+    Professional WordPress content formatting
+    
+    Args:
+        content_html: Raw content from ultimate processor
+        title: Article title
+        url: Source URL
+        source_name: Source name
+    
+    Returns:
+        Clean, professional HTML for WordPress
+    """
+    formatter = WordPressContentFormatter()
+    return formatter.format_content(content_html, title, url, source_name)
+
+
 class UltimateSportsAggregator:
     def __init__(self, config_file='config.json'):
         """Initialize the Ultimate Sports News Aggregator."""
         self.config = self.load_config(config_file)
-        self.content_processor = UltimateContentProcessor()  # NEW: Ultimate processor
+        self.content_processor = UltimateContentProcessor()  # Ultimate processor
         self.posted_articles = self.load_posted_articles()
     
     def load_config(self, config_file):
@@ -456,7 +633,7 @@ class UltimateSportsAggregator:
             
             post_data = {
                 'title': title,
-                'content': content,  # Now clean HTML from content processor
+                'content': content,  # Now clean HTML from content processor + formatter
                 'status': 'publish',
                 'categories': [self.config['wordpress']['category_id']],
                 'featured_media': featured_media_id
@@ -485,7 +662,7 @@ class UltimateSportsAggregator:
             return False
     
     def process_article(self, article, source_name, feed_url):
-        """Process a single article with enhanced content extraction."""
+        """Process a single article with enhanced content extraction and professional formatting."""
         try:
             # Use safe article field access
             safe_article = validate_rss_entry(article)
@@ -510,6 +687,16 @@ class UltimateSportsAggregator:
                 print(f"   ❌ Failed to extract content from {safe_article['title'][:50]}...")
                 return False
             
+            print(f"   ✨ Applying professional WordPress formatting...")
+            
+            # NEW: Apply professional WordPress formatting
+            final_content = format_wordpress_content_professional(
+                processed_content['content'],
+                processed_content['title'],
+                processed_content['url'],
+                source_name
+            )
+            
             # Extract featured image
             image_url = safe_extract_image_url(article)
             
@@ -517,7 +704,7 @@ class UltimateSportsAggregator:
             print(f"   📤 Posting to WordPress...")
             success = self.post_to_wordpress(
                 processed_content['title'], 
-                processed_content['content'], 
+                final_content,  # Use professionally formatted content
                 source_name, 
                 image_url
             )
@@ -568,7 +755,7 @@ class UltimateSportsAggregator:
     def run(self):
         """Main execution method with enhanced processing."""
         print("🚀 Ultimate Sports News Aggregator Starting...")
-        print("📰 Using Advanced Content Processing...")
+        print("📰 Using Advanced Content Processing + Professional WordPress Formatting...")
         print(f"🕐 Processing time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
         
         if not self.config:
@@ -599,6 +786,7 @@ class UltimateSportsAggregator:
         print(f"   📰 Total articles posted: {total_processed}")
         print(f"   🗃️  Database updated: posted_articles.json")
         print(f"   ✨ Enhanced content processing active")
+        print(f"   🎯 Professional WordPress formatting active")
 
 
 def main():
