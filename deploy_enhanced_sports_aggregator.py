@@ -503,6 +503,36 @@ class WordPressContentFormatter:
         return text.strip()
 
 
+def get_optimized_image_quality(source_name):
+    """
+    Get optimal image quality settings based on source
+    Returns quality settings for different news sources
+    """
+    # Higher quality for BBC Sport and professional sports outlets
+    if 'bbc' in source_name.lower():
+        return {
+            'quality': 95,  # Much higher quality for BBC
+            'optimize': False,  # Disable optimization for BBC
+            'max_width': 1400,  # Allow larger images for BBC
+            'progressive': True  # Progressive JPEG
+        }
+    elif any(source in source_name.lower() for source in ['sky', 'guardian', 'yahoo']):
+        return {
+            'quality': 92,  # High quality for premium sources
+            'optimize': False,
+            'max_width': 1300,
+            'progressive': True
+        }
+    else:
+        # Standard quality for other sources
+        return {
+            'quality': 88,  # Still higher than current 85
+            'optimize': True,
+            'max_width': 1200,
+            'progressive': False
+        }
+
+
 def format_wordpress_content_professional(content_html, title, url, source_name):
     """
     Professional WordPress content formatting
@@ -557,8 +587,8 @@ class UltimateSportsAggregator:
         content = f"{title}{url}"
         return hashlib.md5(content.encode()).hexdigest()
     
-    def optimize_image(self, image_url):
-        """Download and optimize image for WordPress (EXISTING - KEEP UNCHANGED)."""
+    def optimize_image(self, image_url, source_name="Unknown"):
+        """Download and optimize image with improved quality settings for WordPress."""
         try:
             response = requests.get(image_url, timeout=10)
             response.raise_for_status()
@@ -572,27 +602,45 @@ class UltimateSportsAggregator:
                 background.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
                 image = background
             
-            max_width = 1200
+            # Get quality settings based on source
+            quality_settings = get_optimized_image_quality(source_name)
+            max_width = quality_settings['max_width']
+            
+            # Resize only if needed
             if image.width > max_width:
                 ratio = max_width / image.width
                 new_height = int(image.height * ratio)
                 image = image.resize((max_width, new_height), Image.Resampling.LANCZOS)
             
             output = BytesIO()
-            image.save(output, format='JPEG', quality=85, optimize=True)
+            
+            # Save with improved settings
+            save_kwargs = {
+                'format': 'JPEG',
+                'quality': quality_settings['quality'],
+                'optimize': quality_settings['optimize']
+            }
+            
+            # Add progressive setting if available
+            if quality_settings.get('progressive'):
+                save_kwargs['progressive'] = True
+                
+            image.save(output, **save_kwargs)
             output.seek(0)
+            
+            print(f"   🖼️  Optimized image: {max_width}px width, Q{quality_settings['quality']}")
             return output.getvalue()
             
         except Exception as e:
             print(f"Error optimizing image: {str(e)}")
             return None
     
-    def upload_image_to_wordpress(self, image_url, title):
+    def upload_image_to_wordpress(self, image_url, title, source_name="Unknown"):
         """Upload optimized image to WordPress (FIXED VERSION)."""
         if not image_url:
             return None
         
-        optimized_image = self.optimize_image(image_url)
+        optimized_image = self.optimize_image(image_url, source_name)
         if not optimized_image:
             return None
         
@@ -647,7 +695,7 @@ class UltimateSportsAggregator:
             # Upload image if available
             featured_media_id = None
             if image_url:
-                featured_media_id = self.upload_image_to_wordpress(image_url, title)
+                featured_media_id = self.upload_image_to_wordpress(image_url, title, source_name)
             
             post_data = {
                 'title': title,
