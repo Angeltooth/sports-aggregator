@@ -11,7 +11,15 @@ from datetime import datetime
 def check_file_version(file_path):
     """Check file version and details"""
     if not os.path.exists(file_path):
-        return f"❌ File not found: {file_path}"
+        return {
+            'exists': False,
+            'path': file_path,
+            'size': 'N/A',
+            'modified': 'N/A',
+            'hash': 'N/A',
+            'has_auth_fix': False,
+            'has_import_auth': False
+        }
     
     # Get file stats
     stat = os.stat(file_path)
@@ -28,6 +36,7 @@ def check_file_version(file_path):
     has_import_auth = b'from requests.auth import HTTPBasicAuth' in file_content
     
     return {
+        'exists': True,
         'path': file_path,
         'size': file_size,
         'modified': modified_time,
@@ -55,23 +64,29 @@ def main():
     current_version = check_file_version('./deploy_enhanced_sports_aggregator.py')
     
     print(f"\n📁 Workspace version:")
-    print(f"   - Path: {workspace_version.get('path', 'N/A')}")
-    print(f"   - Size: {workspace_version.get('size', 'N/A')} bytes")
-    print(f"   - Modified: {workspace_version.get('modified', 'N/A')}")
-    print(f"   - Hash: {workspace_version.get('hash', 'N/A')}")
-    print(f"   - Has HTTPBasicAuth: {'✅' if workspace_version.get('has_auth_fix') else '❌'}")
-    print(f"   - Has Auth Import: {'✅' if workspace_version.get('has_import_auth') else '❌'}")
+    if workspace_version['exists']:
+        print(f"   - Path: {workspace_version['path']}")
+        print(f"   - Size: {workspace_version['size']} bytes")
+        print(f"   - Modified: {workspace_version['modified']}")
+        print(f"   - Hash: {workspace_version['hash']}")
+        print(f"   - Has HTTPBasicAuth: {'✅' if workspace_version['has_auth_fix'] else '❌'}")
+        print(f"   - Has Auth Import: {'✅' if workspace_version['has_import_auth'] else '❌'}")
+    else:
+        print(f"   - ❌ File not found: {workspace_version['path']}")
     
     print(f"\n📁 Current directory version:")
-    print(f"   - Path: {current_version.get('path', 'N/A')}")
-    print(f"   - Size: {current_version.get('size', 'N/A')} bytes")
-    print(f"   - Modified: {current_version.get('modified', 'N/A')}")
-    print(f"   - Hash: {current_version.get('hash', 'N/A')}")
-    print(f"   - Has HTTPBasicAuth: {'✅' if current_version.get('has_auth_fix') else '❌'}")
-    print(f"   - Has Auth Import: {'✅' if current_version.get('has_import_auth') else '❌'}")
+    if current_version['exists']:
+        print(f"   - Path: {current_version['path']}")
+        print(f"   - Size: {current_version['size']} bytes")
+        print(f"   - Modified: {current_version['modified']}")
+        print(f"   - Hash: {current_version['hash']}")
+        print(f"   - Has HTTPBasicAuth: {'✅' if current_version['has_auth_fix'] else '❌'}")
+        print(f"   - Has Auth Import: {'✅' if current_version['has_import_auth'] else '❌'}")
+    else:
+        print(f"   - ❌ File not found: {current_version['path']}")
     
-    # Compare files
-    if 'hash' in workspace_version and 'hash' in current_version:
+    # Compare files only if both exist
+    if workspace_version['exists'] and current_version['exists']:
         same_file, hash1, hash2 = compare_files(
             '/workspace/user_input_files/deploy_enhanced_sports_aggregator.py',
             './deploy_enhanced_sports_aggregator.py'
@@ -89,15 +104,22 @@ def main():
             print(f"   cp /workspace/user_input_files/deploy_enhanced_sports_aggregator.py ./")
     
     print(f"\n💡 Recommendations:")
-    if workspace_version.get('has_auth_fix') and not current_version.get('has_auth_fix'):
-        print(f"   - Copy the fixed version: cp /workspace/user_input_files/deploy_enhanced_sports_aggregator.py ./")
-        print(f"   - Then run: python test_main_script_exact.py")
-    elif workspace_version.get('has_auth_fix') and current_version.get('has_auth_fix'):
-        print(f"   - Both files have the auth fix ✅")
-        print(f"   - Run: python test_main_script_exact.py to test")
-    else:
-        print(f"   - Workspace version may not have the fix")
-        print(f"   - Check the fix in: /workspace/AUTHENTICATION_FIX_SUMMARY.md")
+    if workspace_version['exists'] and current_version['exists']:
+        if workspace_version['has_auth_fix'] and not current_version['has_auth_fix']:
+            print(f"   - Copy the fixed version: cp /workspace/user_input_files/deploy_enhanced_sports_aggregator.py ./")
+            print(f"   - Then run: python test_main_script_exact.py")
+        elif workspace_version['has_auth_fix'] and current_version['has_auth_fix']:
+            print(f"   - Both files have the auth fix ✅")
+            print(f"   - Run: python test_main_script_exact.py to test")
+        else:
+            print(f"   - Workspace version may not have the fix")
+            print(f"   - Check the fix in: /workspace/AUTHENTICATION_FIX_SUMMARY.md")
+    elif not current_version['exists']:
+        print(f"   - Current directory file is missing!")
+        print(f"   - Copy the workspace version: cp /workspace/user_input_files/deploy_enhanced_sports_aggregator.py ./")
+    elif not workspace_version['exists']:
+        print(f"   - Workspace version not accessible!")
+        print(f"   - Check if files are in the correct location")
 
 if __name__ == "__main__":
     main()
